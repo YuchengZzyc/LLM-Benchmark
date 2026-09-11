@@ -327,8 +327,8 @@ def _generate(model, tokenizer, cfg: EvalConfig, prompt: str, max_new: int,
 
     二次修复（2026-09-11 诊断后）：
     - 停止条件按分支分口径：纯文本分支用 ``eos_token_id``（天然生成到 EOS），
-      chat 分支用 ``stop_strings=["<|im_end|>"]``（冻结口径，见
-      docs/evaluation_spec.md §2.1；残留 <think> 前导靠 decode 后整块剥除）。
+      chat 分支用 ``stop_strings=["<|im_end|>", "</think>"]``（关 thinking 的
+      完整输出到 ``</think>``，不会被 ``<|im_end|>`` 中途截断）。
     """
     import torch
 

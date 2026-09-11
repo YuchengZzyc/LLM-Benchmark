@@ -85,12 +85,22 @@ def _merge_metrics(old: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]:
     """按维度合并 metrics：主框架（run_lm_eval）与长上下文（run_longbench）
     共写同一 result.json，后写的一侧只更新自己产出的维度 / 顶层键，
     不整体替换（否则会把先跑一侧的分数冲掉，冒烟 2026-09-10 实际踩坑）。
+
+    嵌套维度的 key 做**深度合并**：同一维度下不同子任务（如 long_context 下的
+    longbench_* 与 aa_lcr）必须并存，不能用浅层 ``dict.update`` 互相覆盖
+    （2026-09-11 实测：AA-LCR run2 落盘时把 LongBench 的 12 个任务分数冲掉了）。
     """
     combined = dict(old)
     new_dims = new.get("dimensions")
     if isinstance(new_dims, dict):
         dims = dict(combined.get("dimensions") or {})
-        dims.update(new_dims)
+        for dk, dv in new_dims.items():
+            if isinstance(dv, dict) and isinstance(dims.get(dk), dict):
+                inner = dict(dims[dk])
+                inner.update(dv)
+                dims[dk] = inner
+            else:
+                dims[dk] = dv
         combined["dimensions"] = dims
     for k, v in new.items():
         if k != "dimensions":

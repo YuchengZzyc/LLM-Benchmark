@@ -61,7 +61,7 @@
     "ifeval": {
       "samples": 541,
       "prompt_level_strict": 0.82255,
-      "inst_level_strict": 0.87530,
+      "inst_level_strict": 0.8753,
       "prompt_level_loose": 0.85397,
       "inst_level_loose": 0.89928,
       "official": 0.898,
@@ -83,5 +83,90 @@
     "ceval_v0_0": 0.241,
     "mmmlu_prox_zh_v0_0": 0.3738,
     "mmlu_redux_generative_v0_0": 0.2333
+  },
+  "_updated": "2026-09-11T15:34:33Z",
+  "version": "qwen35-4b-base-v0.1",
+  "model": "Qwen3.5-4B",
+  "metrics": {
+    "dimensions": {
+      "long_context": {
+        "aa_lcr": {
+          "dataset": "AA-LCR",
+          "dataset_version": "v1.1",
+          "n_questions": 100,
+          "n_judged": 100,
+          "correct": 59,
+          "accuracy": 0.59,
+          "judge_model": "gpt-5.6-luna",
+          "total_generation_seconds": 9484.4
+        },
+        "multifieldqa_en": {
+          "em": 0.0,
+          "f1": 0.229701,
+          "samples": 30,
+          "category": "single_doc_qa"
+        },
+        "qasper": {
+          "em": 0.0,
+          "f1": 0.094827,
+          "samples": 30,
+          "category": "single_doc_qa"
+        },
+        "hotpotqa": {
+          "em": 0.0,
+          "f1": 0.06385,
+          "samples": 30,
+          "category": "multi_doc_qa"
+        },
+        "2wikimqa": {
+          "em": 0.0,
+          "f1": 0.075855,
+          "samples": 30,
+          "category": "multi_doc_qa"
+        },
+        "musique": {
+          "em": 0.0,
+          "f1": 0.060955,
+          "samples": 30,
+          "category": "multi_doc_qa"
+        },
+        "gov_report": {
+          "rougeL": 0.184245,
+          "samples": 30,
+          "category": "summarization"
+        },
+        "multi_news": {
+          "rougeL": 0.173803,
+          "samples": 30,
+          "category": "summarization"
+        },
+        "trec": {
+          "accuracy": 0.133333,
+          "samples": 30,
+          "category": "few_shot"
+        },
+        "triviaqa": {
+          "em": 0.766667,
+          "f1": 0.844426,
+          "samples": 30,
+          "category": "few_shot"
+        },
+        "samsum": {
+          "rougeL": 0.399087,
+          "samples": 30,
+          "category": "few_shot"
+        },
+        "passage_count": {
+          "accuracy": 0.0,
+          "samples": 30,
+          "category": "synthetic"
+        },
+        "passage_retrieval_en": {
+          "accuracy": 0.266667,
+          "samples": 30,
+          "category": "synthetic"
+        }
+      }
+    }
   }
 }

@@ -32,3 +32,9 @@ logs/
 
 # Local eval runner cache
 _remote_*.py
+
+# temp sync helpers (local-only, never commit)
+.tmp_push/
+
+# LLM eval data sets (large; fetched on remote, not versioned)
+data/

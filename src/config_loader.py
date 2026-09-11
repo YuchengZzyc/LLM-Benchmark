@@ -216,6 +216,11 @@ class EvaluationConfig:
     seed: int = 42
     device: str = "cuda"
     longbench_data_dir: Optional[str] = None
+    # AA-LCR 长上下文评测（scripts/aa_lcr_run.py）
+    aa_lcr_csv_path: Optional[str] = None   # AA-LCR_Dataset.csv（100 行）
+    aa_lcr_docs_dir: Optional[str] = None   # 解压后文档根目录（lcr/{category}/{set_id}/）
+    judge_api_url: str = ""                 # OpenAI 兼容判题器 base URL
+    judge_model: str = "gpt-5.6-luna"       # 判题器模型名（官方固定）
     gen_kwargs: dict[str, Any] = field(default_factory=lambda: {
         "temperature": 0.0,
         "top_p": 1.0,

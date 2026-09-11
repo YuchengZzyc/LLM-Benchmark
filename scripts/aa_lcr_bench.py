@@ -57,46 +57,45 @@ def build_prompt(docs: list[str], question: str) -> str:
 
 
 def main():
-    row = load_row(0)
-    docs = load_docs(row)
-    prompt = build_prompt(docs, row["question"])
-    print(f"question_id={row['question_id']} category={row['document_category']} "
-          f"docs={len(docs)} csv_input_tokens={row['input_tokens']}")
-
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
     tok = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=False)
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_PATH, torch_dtype=torch.bfloat16).to("cuda")
-    print(f"model loaded, attn_impl 默认: {getattr(model.config, 'attn_implementation', 'n/a')}")
+    print(f"model loaded")
 
-    messages = [
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": prompt},
-    ]
-    t0 = time.time()
-    batch = tok.apply_chat_template(
-        messages, tokenize=True, add_generation_prompt=True,
-        return_tensors="pt", enable_thinking=False, truncation=False)
-    print(f"template+tokens: {batch['input_ids'].shape[1]} tokens, {time.time()-t0:.1f}s")
-    batch = {k: v.to("cuda") for k, v in batch.items()}
+    for idx in range(3):
+        row = load_row(idx)
+        docs = load_docs(row)
+        prompt = build_prompt(docs, row["question"])
+        print(f"q{idx} qid={row['question_id']} cat={row['document_category']} docs={len(docs)}")
 
-    torch.cuda.reset_peak_memory_stats()
-    t0 = time.time()
-    with torch.no_grad():
-        out = model.generate(
-            **batch, max_new_tokens=MAX_NEW, do_sample=False,
-            eos_token_id=tok.eos_token_id, pad_token_id=tok.eos_token_id,
-            stop_strings=["<|im_end|>"], tokenizer=tok)
-    dt = time.time() - t0
-    new_tokens = out[0, batch["input_ids"].shape[1]:]
-    print(f"generate: {dt:.1f}s ({MAX_NEW} new tok, {(dt/MAX_NEW*1e3):.0f} ms/tok decode)")
-    print(f"prefill≈{(dt - MAX_NEW*(dt/MAX_NEW)):.1f}s | peak VRAM: "
-          f"{torch.cuda.max_memory_allocated()/1e9:.1f} GB")
-    dec = tok.decode(new_tokens, skip_special_tokens=True)
-    print("--- 生成(前200) ---")
-    print(repr(dec[:200]))
-    print(f"全部完成，总计 {(time.time()-t0):.1f}s（含生成）")
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt},
+        ]
+        t0 = time.time()
+        batch = tok.apply_chat_template(
+            messages, tokenize=True, add_generation_prompt=True,
+            return_tensors="pt", enable_thinking=False, truncation=False)
+        ntok = batch["input_ids"].shape[1]
+        print(f"  tokens={ntok} ({(time.time()-t0)*1e3:.0f}ms tok)")
+        batch = {k: v.to("cuda") for k, v in batch.items()}
+
+        torch.cuda.reset_peak_memory_stats()
+        t0 = time.time()
+        with torch.no_grad():
+            out = model.generate(
+                **batch, max_new_tokens=64, do_sample=False,
+                eos_token_id=tok.eos_token_id, pad_token_id=tok.eos_token_id,
+                stop_strings=["<|im_end|>"], tokenizer=tok)
+        dt = time.time() - t0
+        new_tokens = out[0, batch["input_ids"].shape[1]:]
+        print(f"  generate {dt:.1f}s ({new_tokens.numel()} new, "
+              f"{(dt/new_tokens.numel()*1e3):.0f} ms/tok) | peak "
+              f"{torch.cuda.max_memory_allocated()/1e9:.1f} GB")
+        print(f"  out: {tok.decode(new_tokens, skip_special_tokens=True)[:120]!r}")
+    print("done")
 
 
 if __name__ == "__main__":

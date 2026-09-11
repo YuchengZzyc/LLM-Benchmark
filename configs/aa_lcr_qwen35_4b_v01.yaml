@@ -1,0 +1,52 @@
+# =============================================================================
+# 配置：aa_lcr_qwen35_4b_v01.yaml
+# Qwen3.5-4B v0.1 基线 · 长上下文维度（AA-LCR 官方复现）
+# =============================================================================
+# 由 scripts/aa_lcr_run.py 独立执行（不绑定 lm-eval）。
+# 协议对齐官方模型卡 57.0 复现：100 题全量、官方 prompt 模板、
+# 判题器 gpt-5.6-luna（OpenAI 兼容 API）。单进程串行（RTX 5090 32GB，
+# 冒烟验证峰值显存 25.6GB，单题 10-24s，全量约 25-30 分钟生成）。
+# 结果写入 results/qwen35-4b-base-v0.1/result.json 的
+# metrics.dimensions.long_context.aa_lcr（与主框架合并，不动其他维度）。
+# 判题 API key 通过环境变量 JUDGE_API_KEY 传入（不写入任何文件）。
+# =============================================================================
+
+model:
+  name: Qwen3.5-4B
+  version: qwen35-4b-base-v0.1
+  type: baseline
+  path: /data/yucheng/madm-llm/models/Qwen3.5-4B
+  dtype: bfloat16
+  trust_remote_code: false
+  revision: null
+  tokenizer_path: null
+
+evaluation:
+  framework: aa_lcr
+  batch_size: 1
+  apply_chat_template: true
+  max_length: 262144         # 模型原生窗口，全量上下文不截断
+  num_fewshot: null
+  seed: 42
+  device: cuda
+  # AA-LCR 数据（服务器已就位）
+  aa_lcr_csv_path: /data/yucheng/AA-LCR_Dataset.csv
+  aa_lcr_docs_dir: /data/yucheng/aa_lcr_data/lcr
+  # 判题器（官方协议固定）
+  judge_api_url: http://192.168.13.165:8002
+  judge_model: gpt-5.6-luna
+  gen_kwargs:
+    temperature: 0.0
+    top_p: 1.0
+    max_new_tokens: 4096     # Run#2 16 题在 1024 token 处硬截断，官方条件无此限制
+    enable_thinking: true    # 官方模型卡 57.0 为带思考的完整输出；Run#2 关闭思考压低了推理分
+
+tasks:
+  long_context:
+    - aa_lcr
+
+output:
+  root: results/
+  registry: results/registry.yaml
+  keep_samples: true
+  max_samples: 100
