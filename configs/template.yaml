@@ -1,0 +1,75 @@
+# =============================================================================
+# 配置模板 template.yaml
+# 所有运行参数通过 yaml 管理，代码中禁止硬编码模型路径 / benchmark / batch / dtype。
+# 用法：复制为实际配置再修改，如 configs/baseline_qwen35_4b.yaml
+#   cp configs/template.yaml configs/<your_version>.yaml
+# =============================================================================
+
+model:
+  name: Qwen3.5-4B                  # 模型展示名
+  version: qwen35-4b-base-v0.0      # 模型版本标识（须唯一，对应 results/registry.yaml）
+  type: baseline                    # 版本类型：baseline | lora | dpo | other
+  path: YOUR_MODEL_PATH             # 模型路径：本地目录 或 HuggingFace 仓库名
+  dtype: bfloat16                   # 推理精度：bfloat16 | float16 | float32 | auto
+  trust_remote_code: false          # 是否信任远程代码（非必要请保持 false）
+  revision: null                    # HF 分支/commit，可为 null
+  tokenizer_path: null              # 默认与 model.path 相同，可单独指定
+
+evaluation:
+  framework: lm-eval  # 主框架（长上下文走独立接口，见 tasks.long_context）
+  batch_size: 16              # 5090 32GB 实测可承载；如显存不足降为 8
+  apply_chat_template: true         # 是否应用 chat template
+  max_length: 4096                  # 生成最大长度（LongBench 独立接口会使用）
+  num_fewshot: null            # null = 各任务默认 few-shot（如 gsm8k 5-shot）；如需统一 0-shot 请填 0
+  seed: 42                          # 随机种子，保证可复现
+  device: cuda                      # cuda | cpu | auto
+  longbench_data_dir: null          # LongBench 数据本地目录（null = 从 HuggingFace 下载）
+  gen_kwargs:                       # 生成参数（部分任务 / 长上下文接口使用）
+    temperature: 0.0
+    top_p: 1.0
+    max_new_tokens: 1024
+
+tasks:
+  knowledge:                        # 知识与理解 -> Accuracy
+    - mmlu_pro                     #   MMLU-Pro（5-shot）
+    - mmlu_redux_generative        #   MMLU-Redux（generative）
+    - mmlu_prox_en                 #   MMLU-ProX 英文（5-shot）
+    - mmlu_prox_zh                 #   MMLU-ProX 中文（5-shot）
+    - ceval-valid                  #   C-Eval 验证集（lm-eval 任务名为 ceval-valid，无 c_eval）
+  reasoning:                       # 专业推理 -> Exact Match / Accuracy（含模型卡近似替代项）
+    - gsm8k                       #   GSM8K（5-shot）
+    - gpqa_diamond_zeroshot       #   GPQA Diamond（0-shot）
+    - leaderboard_math_hard       #   MATH-hard（4-shot）——HMMT 近似替代
+    - aime24                      #   AIME 2024（0-shot）——HMMT 补充
+    - aime25                      #   AIME 2025（0-shot）——HMMT 补充
+    - minerva_math500             #   MATH-500（4-shot）
+  instruction:                     # 指令遵循 -> strict accuracy / loose accuracy
+    - ifeval                     #   IFEval（0-shot）
+  longbench2:                      # LongBench v2（lm-eval 主框架任务组，非 LongBench v1）
+    - longbench2                 #   GROUP：20 叶任务
+  code:                            # 代码能力（LiveCodeBench 近似替代；humaneval 需 code_eval 依赖）
+    - humaneval                  #   HumanEval（0-shot）——LiveCodeBench 近似替代
+    - humaneval_plus             #   HumanEval+（0-shot）
+    - mbpp_plus                  #   MBPP+（3-shot）
+  long_context:                    # 长上下文 LongBench v1，由 run_longbench.py 单独执行
+    - multifieldqa_en             #   | 单文档问答 (F1/EM)
+    - qasper                      #   | 单文档问答 (F1/EM)
+    - hotpotqa                    #   | 多文档问答 (F1/EM)
+    - 2wikimqa                    #   | 多文档问答 (F1/EM)
+    - musique                     #   | 多文档问答 (F1/EM)
+    - gov_report                  #   | 摘要 (ROUGE-L)
+    - multi_news                  #   | 摘要 (ROUGE-L)
+    - trec                        #   | few-shot 分类 (accuracy)
+    - triviaqa                  #   | few-shot 问答 (F1/EM)
+    - samsum                      #   | few-shot 摘要 (ROUGE-L)
+    - passage_count               #   | 合成:计数 (accuracy)
+    - passage_retrieval_en        #   | 合成:检索 (accuracy)
+  multilingual:                   # 多语言 -> language accuracy
+    - mgsm_native_cot_zh         #   MGSM 中文原生 CoT（lm-eval 无 mgsm 根任务）
+    - mmmlu_zh_cn                #   MMMLU 中文子集（57 学科）
+
+output:
+  root: results/                    # 结果根目录（所有版本结果存放于此）
+  registry: results/registry.yaml   # 版本登记文件路径
+  keep_samples: true                # 是否保存模型样本输出
+  max_samples: 100                  # 每个任务最多保存的样本数

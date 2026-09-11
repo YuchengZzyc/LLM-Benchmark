@@ -1,0 +1,59 @@
+model:
+  name: Qwen3.5-4B
+  version: qwen35-4b-base-v0.0
+  type: baseline
+  path: /data/yucheng/madm-llm/models/Qwen3.5-4B
+  dtype: bfloat16
+  trust_remote_code: false
+  revision: null
+  tokenizer_path: null
+evaluation:
+  framework: lm-eval
+  batch_size: 8
+  apply_chat_template: true
+  max_length: 4096
+  num_fewshot: null
+  seed: 42
+  device: cuda
+  longbench_data_dir: data/longbench
+  gen_kwargs:
+    temperature: 0.0
+    top_p: 1.0
+    max_gen_toks: 2048
+tasks:
+  knowledge:
+  - mmlu_redux_generative
+  - mmlu_prox_en
+  - mmlu_prox_zh
+  - ceval-valid
+  reasoning:
+  - gsm8k
+  - leaderboard_math_hard
+  - aime24
+  - aime25
+  - minerva_math500
+  instruction:
+  - ifeval
+  longbench2: []
+  code: []
+  long_context:
+  - multifieldqa_en
+  - qasper
+  - hotpotqa
+  - 2wikimqa
+  - musique
+  - gov_report
+  - multi_news
+  - trec
+  - triviaqa
+  - samsum
+  - passage_count
+  - passage_retrieval_en
+  multilingual:
+  - mgsm_native_cot_zh
+  - mmmlu_zh_cn
+output:
+  root: results/
+  registry: results/registry.yaml
+  keep_samples: false
+  max_samples: 30

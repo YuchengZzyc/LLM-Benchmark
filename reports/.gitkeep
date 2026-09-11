@@ -1,0 +1,2 @@
+# 保持 reports/ 目录存在（git 追踪）
+# 报告文件由 scripts/generate_report.py 生成

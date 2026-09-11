@@ -1,0 +1,59 @@
+# =============================================================================
+# 配置：probe_thinking_zh.yaml —— thinking 对照探针（只跑 mmlu_prox_zh 部分叶任务）
+#
+# 目的：一次评测同时输出两组对照，直接对比 thinking 前导对分数的影响。
+#   A 组：mmlu_prox_zh_math / mmlu_prox_zh_other
+#         默认模板（enable_thinking 不传 -> 注入 <think>\n，模型先长推理）
+#   B 组：mmlu_prox_zh_nothink_math / mmlu_prox_zh_nothink_other
+#         走原生 enable_thinking=False + think_end_token 清理，等价关 thinking
+#
+# 参数全部对齐 v0.0 baseline（batch 8 / max_samples 30 / max_gen_toks 2048），
+# 只有模型版本与任务清单不同，保证可复现可对比。
+# 官方 MMLU-ProX 71.5（英+中混合）本轮不追求直接对齐，只验证"关 thinking 是否
+# 显著抬高生成式选择题分数"。
+# =============================================================================
+
+model:
+  name: Qwen3.5-4B
+  version: probe-thinking-zh-v0.1
+  type: baseline
+  path: /data/yucheng/madm-llm/models/Qwen3.5-4B
+  dtype: bfloat16
+  trust_remote_code: false
+  revision: null
+  tokenizer_path: null
+
+evaluation:
+  framework: lm-eval
+  batch_size: 8
+  apply_chat_template: true
+  max_length: 4096
+  num_fewshot: null            # null = 各任务默认 5-shot
+  seed: 42
+  device: cuda
+  longbench_data_dir: data/longbench
+  gen_kwargs:
+    temperature: 0.0
+    top_p: 1.0
+    max_gen_toks: 2048
+
+tasks:
+  knowledge:
+    # A 组：默认模板（thinking 开）
+    - mmlu_prox_zh_math
+    - mmlu_prox_zh_other
+    # B 组：enable_thinking=False + think_end_token（原生，等价关 thinking）
+    - mmlu_prox_zh_nothink_math
+    - mmlu_prox_zh_nothink_other
+  reasoning: []
+  instruction: []
+  longbench2: []
+  code: []
+  long_context: []
+  multilingual: []
+
+output:
+  root: results/
+  registry: results/registry.yaml
+  keep_samples: true
+  max_samples: 30

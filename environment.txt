@@ -1,0 +1,47 @@
+# =============================================================================
+# Benchmark Framework — 环境信息记录
+# 记录运行环境的关键版本信息，供结果回溯与横向比较使用。
+# 以下为 2026-09-10 在评测服务器上的实测输出（非模板）。
+# =============================================================================
+
+[系统环境]
+OS = Ubuntu 26.04 LTS (kernel 7.0.0-29-generic)   # 评测服务器
+CPU = AMD Ryzen 9 9950X 16-Core Processor (32 线程)
+RAM = 59 GB                                        # free -g；available ≈ 48 GB
+GPU = NVIDIA GeForce RTX 5090 32GB (32607 MiB)
+
+[CUDA 环境]
+CUDA Driver = 595.84                               # nvidia-smi 中的 Driver Version
+CUDA Runtime = 13.2                                # nvidia-smi 报告；torch 实际编译于 12.8
+NCCL = 随 torch 2.11.0+cu128 分发
+CUDNN = 随 torch 2.11.0+cu128 分发
+
+[Python 环境]
+Python = 3.11.16                                   # /data/yucheng/madm-llm/.venv（uv 管理）
+PyTorch = 2.11.0+cu128                             # torch.cuda.is_available() == True
+transformers = 5.6.0
+accelerate = 1.11.0
+datasets = 4.0.0                                   # 注意：4.x 已移除数据集脚本加载支持
+lm-eval = 0.4.13
+rouge-score = 0.1.2                                # LongBench 摘要任务评分依赖
+
+[关键配置]
+Batch Size = 8                                     # 16 在 multilingual 维度触发 OOM，降至 8
+DType = bfloat16
+Apply Chat Template = true
+Max Length = 4096
+Gen Kwargs = temperature=0.0, top_p=1.0, max_new_tokens=1024
+Seed = 42
+
+[网络]
+HF Endpoint = https://hf-mirror.com                # huggingface.co 直连不可达（Errno 101）
+HF Cache = /data/yucheng/.cache/huggingface (≈1.1 GB，二次运行无需联网)
+
+# =============================================================================
+# 复现采集命令（在 Linux 服务器上）：
+#   nvidia-smi
+#   python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available())"
+#   uv pip show lm-eval transformers accelerate datasets rouge-score
+# 注：服务器上须用 uv 全路径（非交互 SSH 的 PATH 不含 uv）：
+#   /data/yucheng/.local/bin/uv pip show --python .venv/bin/python lm-eval
+# =============================================================================

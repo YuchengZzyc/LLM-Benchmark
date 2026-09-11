@@ -1,0 +1,87 @@
+{
+  "meta": {
+    "version": "qwen35-4b-base-v0.1",
+    "model": "Qwen3.5-4B",
+    "type": "baseline",
+    "generated_at": "2026-09-11T14:35:00Z",
+    "notes": "口径修复基线：全部任务关闭 thinking（enable_thinking=False）+ MMLU 系纯文本 loglikelihood。GSM8K/C-Eval/MMMLU-zh/MMLU-ProX-zh/IFEval/MGSM 六数据集实测；LongBench 运行中待补。"
+  },
+  "environment": {
+    "framework": "lm-eval 0.4.13",
+    "pytorch": "2.11.0+cu128",
+    "transformers": "5.6.0",
+    "gpu": "RTX 5090",
+    "device": "cuda",
+    "batch_size": 8,
+    "seed": 42,
+    "hf_endpoint": "hf-mirror.com",
+    "model_args": "pretrained=/data/yucheng/madm-llm/models/Qwen3.5-4B,dtype=bfloat16,enable_thinking=False,think_end_token=</think>"
+  },
+  "method": {
+    "thinking": "关闭 thinking：enable_thinking=False + think_end_token=</think>",
+    "generate_until_tasks": "mmlu_prox_zh（生成式 + 正则抽取 答案是\\(?([ABCDEFGHIJ])\\)?）",
+    "loglikelihood_tasks": "apply_chat_template=False 纯文本 MCQ（官方口径）",
+    "fewshot": {
+      "gsm8k": 5,
+      "ceval": 5,
+      "mmmlu_zh": 5,
+      "mmlu_prox_zh": 5
+    }
+  },
+  "results": {
+    "gsm8k": {
+      "samples": 1319,
+      "exact_match_strict": 0.90296,
+      "exact_match_flexible": 0.90296,
+      "official": 0.889,
+      "gap": 0.01396
+    },
+    "ceval_valid": {
+      "samples": 1346,
+      "acc": 0.74963,
+      "acc_norm": 0.74963,
+      "official": 0.851,
+      "gap": -0.10137,
+      "note": "5-shot；官方含 description 上下文模板，lm-eval 缺该上下文，疑为主要差距来源"
+    },
+    "mmmlu_zh": {
+      "samples": 400,
+      "acc": 0.7175,
+      "official": 0.761,
+      "gap": -0.0435,
+      "note": "纯文本 MCQ（apply_chat_template=False）；chat 模板+关 thinking 仅 0.4125，官方走纯文本"
+    },
+    "mmlu_prox_zh": {
+      "samples": 840,
+      "exact_match_custom_extract": 0.63452,
+      "official": 0.715,
+      "gap": -0.08048,
+      "note": "60 样本/科 × 14 科；官方为英+中混合全量 12412"
+    },
+    "ifeval": {
+      "samples": 541,
+      "prompt_level_strict": 0.82255,
+      "inst_level_strict": 0.87530,
+      "prompt_level_loose": 0.85397,
+      "inst_level_loose": 0.89928,
+      "official": 0.898,
+      "gap": 0.00128,
+      "note": "inst_level_loose 完美复现官方 89.8（差 +0.0013）"
+    },
+    "mgsm_native_cot_zh": {
+      "samples": 250,
+      "exact_match_strict": 0.0,
+      "exact_match_flexible": 0.764,
+      "official": null,
+      "gap": null,
+      "note": "juletxara/mgsm 中文子集 0-shot 原生 CoT（关 thinking）；strict 正则 '答案是 X。' 命中 0%，flexible-extract 76.4%，与 GSM8K strict/flexible 差距同源"
+    }
+  },
+  "previous_v0_0_comparison": {
+    "note": "v0.0 全部走 chat 模板（thinking 开/未剥离），生成式任务被 thinking 前导污染，loglikelihood 任务被 <think> 空块污染",
+    "gsm8k_v0_0": 0.4,
+    "ceval_v0_0": 0.241,
+    "mmmlu_prox_zh_v0_0": 0.3738,
+    "mmlu_redux_generative_v0_0": 0.2333
+  }
+}

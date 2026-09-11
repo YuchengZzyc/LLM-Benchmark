@@ -1,0 +1,71 @@
+# =============================================================================
+# 配置：smoke_qwen35_4b.yaml
+# Qwen3.5-4B baseline 冒烟评测配置（快速跑通管线，覆盖五维能力）
+# =============================================================================
+# 目标：2-3 小时内跑通完整评测管线（lm-eval 主框架 + LongBench 独立接口），
+# 五个维度（knowledge / reasoning / instruction / long_context / multilingual）
+# 各覆盖至少一个任务，每个任务限量（max_samples: 20），不追求分数准确性，
+# 只为验证框架链路与数据可下载。
+# 说明：
+#   * mmlu_pro 全量 40880 请求约 42h，冒烟阶段跳过；knowledge 用 3 个轻量任务。
+#   * gpqa_diamond_zeroshot 为门控数据集（Idavidrein/gpqa），远端无 HF_TOKEN，
+#     缓存残缺（28K），冒烟阶段跳过（reasoning 已含 gsm8k/aime24/math500）。
+#   * longbench2 为 LongBench v2 lm-eval 任务组（20 叶任务，非 LongBench v1），
+#     冒烟阶段跳过（长上下文用 run_longbench.py 的 3 个轻量任务覆盖）。
+#   * code 维度（humaneval 系列）需 code_eval 依赖（Python>=3.12）而 venv 是
+#     Python 3.11.16，跳过，不阻塞主线。
+#   * 完整评测请用 baseline_qwen35_4b.yaml（结果可复现模型卡分数）。
+# =============================================================================
+
+model:
+  name: Qwen3.5-4B
+  version: qwen35-4b-smoke-v0.0
+  type: baseline
+  path: /data/yucheng/madm-llm/models/Qwen3.5-4B
+  dtype: bfloat16
+  trust_remote_code: false
+  revision: null
+  tokenizer_path: null
+
+evaluation:
+  framework: lm-eval
+  batch_size: 8                # 16 在 multilingual 触发 OOM，降为 8
+  apply_chat_template: true
+  max_length: 4096
+  num_fewshot: null            # null = 各任务默认 few-shot
+  seed: 42
+  device: cuda
+  longbench_data_dir: data/longbench   # 本地 jsonl（HF 数据集脚本 LongBench.py 被新版 datasets 拒绝）
+  gen_kwargs:
+    temperature: 0.0
+    top_p: 1.0
+    max_new_tokens: 512       # 冒烟降为 512（省显存/提速；完整评测用 1024）
+
+tasks:
+  knowledge:                    # 知识与理解 -> Accuracy
+    - mmlu_redux_generative     #   MMLU-Redux（generative, 58 叶任务，限量）
+    - mmlu_prox_en              #   MMLU-ProX 英文（5-shot, li-lab/MMLU-ProX）
+    - mmlu_prox_zh              #   MMLU-ProX 中文（5-shot, li-lab/MMLU-ProX）
+  reasoning:                    # 专业推理 -> Exact Match / Accuracy
+    - gsm8k                     #   GSM8K（5-shot）
+    - aime24                    #   AIME 2024（0-shot）——HMMT 补充
+    - minerva_math500           #   MATH-500（4-shot, HuggingFaceH4/MATH-500）
+  instruction:                  # 指令遵循 -> strict / loose accuracy
+    - ifeval                    #   IFEval（0-shot）
+  longbench2:                   # LongBench v2 lm-eval 任务组（冒烟跳过，见头部注释）
+    []
+  code:                         # 代码能力（冒烟跳过，见头部注释）
+    []
+  long_context:                 # 长上下文 LongBench v1，由 run_longbench.py 单独执行
+    - multifieldqa_en           #   | 单文档问答 (F1/EM)
+    - hotpotqa                  #   | 多文档问答 (F1/EM)
+    - trec                      #   | few-shot 分类 (accuracy)
+  multilingual:                 # 多语言 -> language accuracy
+    - mgsm_native_cot_zh        #   MGSM 中文原生 CoT
+    - mmmlu_zh_cn               #   MMMLU 中文子集（57 学科，限量）
+
+output:
+  root: results/
+  registry: results/registry.yaml
+  keep_samples: false
+  max_samples: 20               # 冒烟限量：每任务最多 20 条（管线验证用）

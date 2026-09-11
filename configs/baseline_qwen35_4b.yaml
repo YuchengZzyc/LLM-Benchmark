@@ -1,0 +1,102 @@
+# =============================================================================
+# 配置：baseline_qwen35_4b.yaml
+# Qwen3.5-4B 未微调基座（baseline）评测配置
+# =============================================================================
+# 任务清单按《大模型通用能力评测方法调研报告》7.2 节 Qwen3.5-4B 官方模型卡
+# 整理（全部经远端 lm-eval 0.4.13 task_index 逐一核实存在）。
+#   模型卡可复现项 —— 直接可跑：
+#     MMLU-Pro 79.1 -> mmlu_pro            (42 学科叶任务，5-shot, exact_match；
+#       全量 40880 请求约 42h，本次按需跳过，知识维度由其余四项覆盖)
+#     MMLU-Redux 88.8 -> mmlu_redux_generative  (58 叶任务, generative)
+#     MMLU-ProX 71.5 -> mmlu_prox_en / mmlu_prox_zh (各14学科, 5-shot)
+#     MMMLU 76.1    -> mmmlu_zh_cn         (57 学科, 中文子集)
+#     GPQA Diamond 76.2 -> gpqa_diamond_zeroshot (0-shot, Idavidrein/gpqa；门控数据集，
+#      需 HF_TOKEN，本轮暂摘，待补跑，见 reasoning 段注释)
+#     GSM8K         -> gsm8k               (5-shot)
+#     IFEval 89.8   -> ifeval              (0-shot)
+#     LongBench v2 50.0 -> longbench2      (GROUP, 20 叶任务)
+#   模型卡项，lm-eval 无对应任务，用近似替代（报告注明替代关系，不做直接胜负结论）：
+#     HMMT 74.0/76.8   -> leaderboard_math_hard（8学科, 4-shot）; aime24/aime25（0-shot）
+#     LiveCodeBench 55.8 -> humaneval（0-shot）; humaneval_plus / mbpp_plus
+#     MATH-500          -> minerva_math500（4-shot）
+#   多语言：MGSM 用中文原生 CoT 任务 mgsm_native_cot_zh（juletxara/mgsm）。
+# 2026-09-10 冒烟验证后同步的变更：
+#   * batch_size 16->8（multilingual OOM 实测修复）
+#   * longbench_data_dir null->data/longbench（datasets 4.0 移除脚本加载器）
+#   * code / longbench2 任务组摘除（前者需 Python>=3.12 的 code_eval，
+#     后者数据加载未验证），五维主目标不受影响
+# 说明：c_eval 在 lm-eval 0.4.13 中不存在，正确任务名为 ceval-valid（52 叶任务）。
+# 说明：longbench2 是 lm-eval 任务组，不属于 LongBench v1，必须走主框架维度
+#       （放 tasks.long_context 会被 run_longbench.py 的 TASK_META 校验拒绝）。
+# =============================================================================
+
+model:
+  name: Qwen3.5-4B
+  version: qwen35-4b-base-v0.0
+  type: baseline
+  path: /data/yucheng/madm-llm/models/Qwen3.5-4B
+  dtype: bfloat16
+  trust_remote_code: false
+  revision: null
+  tokenizer_path: null
+
+evaluation:
+  framework: lm-eval
+  batch_size: 8               # 5090 32GB 实测：16 在 multilingual 维度 OOM，降为 8
+  apply_chat_template: true
+  max_length: 4096
+  num_fewshot: null            # null = 各任务默认 few-shot；如需统一 0-shot 请填 0
+  seed: 42
+  device: cuda
+  longbench_data_dir: data/longbench   # datasets 4.0 移除脚本加载器，须本地 JSONL（冒烟已验证）
+  gen_kwargs:
+    temperature: 0.0
+    top_p: 1.0
+    max_gen_toks: 2048        # 诊断 2026-09-10：基座 CoT 前导冗长（400-6000 字符），
+                              #   512 截断致生成类任务大量 0 分；2048 平衡时长与完整性
+
+tasks:
+  knowledge:                    # 知识与理解 -> Accuracy
+    # mmlu_pro 本轮跳过（全量 42 学科约 42h；知识维度由 MMLU-Redux/ProX/C-Eval 覆盖）
+    - mmlu_redux_generative     #   MMLU-Redux（generative, fxmarty/mmlu-redux-2.0-ok）
+    - mmlu_prox_en              #   MMLU-ProX 英文（5-shot, li-lab/MMLU-ProX）
+    - mmlu_prox_zh              #   MMLU-ProX 中文（5-shot, li-lab/MMLU-ProX）
+    - ceval-valid               #   C-Eval 验证集（原 c_eval 不存在，此为正确任务名）
+  reasoning:                    # 专业推理 -> Exact Match / Accuracy
+    - gsm8k                     #   GSM8K（5-shot）
+    # gpqa_diamond_zeroshot 暂摘：Idavidrein/gpqa 是门控数据集，远端无 HF_TOKEN、
+    #   缓存残缺（28K），匿名无法下载。推理维度其余任务（gsm8k/leaderboard_math_hard/
+    #   aime24/aime25/minerva_math500）不受影响。待配置 HF_TOKEN 后补跑。
+    - leaderboard_math_hard     #   HMMT 替代：MATH-hard（8 学科, 4-shot, MATH-lighteval）
+    - aime24                    #   HMMT 补充：AIME 2024（0-shot）
+    - aime25                    #   HMMT 补充：AIME 2025（0-shot）
+    - minerva_math500           #   MATH-500（4-shot, HuggingFaceH4/MATH-500）
+  instruction:                  # 指令遵循 -> strict / loose accuracy
+    - ifeval                    #   IFEval（0-shot）
+  longbench2:                   # LongBench v2（模型卡 50.0）——本轮跳过
+    []                          # lm-eval 任务组数据加载未在本环境验证，长上下文由下方 v1 覆盖
+  code:                         # 代码能力（humaneval 系列需 code_eval，要求 Python>=3.12，
+    []                          #   当前 venv 3.11.16 不可跑；且不属于五维主目标，不阻塞主线）
+  long_context:                 # 长上下文 LongBench v1，由 run_longbench.py 单独执行
+    - multifieldqa_en           #   | 单文档问答 (F1/EM)
+    - qasper                    #   | 单文档问答 (F1/EM)
+    - hotpotqa                  #   | 多文档问答 (F1/EM)
+    - 2wikimqa                  #   | 多文档问答 (F1/EM)
+    - musique                   #   | 多文档问答 (F1/EM)
+    - gov_report                #   | 摘要 (ROUGE-L)
+    - multi_news                #   | 摘要 (ROUGE-L)
+    - trec                      #   | few-shot 分类 (accuracy)
+    - triviaqa                 #   | few-shot 问答 (F1/EM)（官方名 triviaqa）
+    - samsum                    #   | few-shot 摘要 (ROUGE-L)
+    - passage_count             #   | 合成:计数 (accuracy)
+    - passage_retrieval_en      #   | 合成:检索 (accuracy)
+  multilingual:                 # 多语言 -> language accuracy
+    - mgsm_native_cot_zh        #   MGSM 中文原生 CoT（原 mgsm 根任务不存在，此为正确任务名）
+    - mmmlu_zh_cn               #   MMMLU 中文子集（57 学科）
+
+output:
+  root: results/
+  registry: results/registry.yaml
+  keep_samples: false
+  max_samples: 30             # v0.0 限量基线：每任务/每学科叶 30 条（单卡夜间可完成；
+                              #   2048 生成口径下估算 6-7h）。全量评测置 null 并升 v1.0
