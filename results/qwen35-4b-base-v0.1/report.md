@@ -48,10 +48,13 @@
 | MMLU-ProX (zh) | 840 | exact_match (custom-extract) | **0.63452** | 0.715 | −0.080 |
 | IFEval | 541 | inst_level_loose_acc | **0.89928** | 0.898 | +0.001 |
 | MGSM (zh) | 250 | exact_match (flexible-extract) | **0.764** | — | — |
+| AA-LCR v1.1 | 100 | accuracy（gpt-5.6-luna 判题） | **0.590** | 0.570 | +0.020 |
 
-## 待补项
+长上下文参考分：LongBench v1 × 12（30 样本/任务，不作验收口径）见
+`result.json` `metrics.dimensions.long_context` 与正式报告 §3.2。
 
-- P0: MMMLU-zh 全量 57 科（多语言，确认采样差）
-- P1: C-Eval 官方 description 模板验证（差 10 点假设）
-- P2: LongBench v1 × 12（长上下文，运行中）
-- P2: MMLU-Redux（4115）
+## 可选后续（非协议内，全流程已跑通）
+
+- MMMLU-zh 全量 57 科（确认 400 采样差）
+- C-Eval 官方 description 模板验证（差 10 点假设）
+- MMLU-Redux（4115）

@@ -36,16 +36,20 @@
 | 项 | 冻结值 |
 | --- | --- |
 | 数据集 | `ArtificialAnalysis/AA-LCR` v1.1（100 题，text-only） |
-| 数据源 | `AA-LCR_Dataset.csv` + 解压 `aa_lcr_data/lcr/{category}/{set_id}/{filename}.txt`（服务器已部署） |
-| 生成引擎 | vLLM（单卡 5090 32GB，2 worker 各 50 题并行） |
-| 上下文 | 每题全量文档（~94k tokens），按 `input_tokens` 截断到 90k（保险） |
+| 数据源 | `AA-LCR_Dataset.csv` + 解压 `aa_lcr_data/lcr/{category}/{set_id}/{filename}.txt`（服务器已部署；文件名须 NFC 归一化） |
+| 生成引擎 | HF generate（fla 0.3.0 Triton 内核），**单进程串行** 100 题（vLLM 双进程设计实测显存不足而作废，见 [aa_lcr_plan.md](aa_lcr_plan.md) §3） |
+| 生成参数 | greedy（temperature=0, top_p=1）、`max_new_tokens=4096`、`enable_thinking=True`（官方 57.0 为带思考口径；run2 关 thinking + 1024 截断仅 32.7%） |
+| 上下文 | 每题全量文档（~94k–99k tokens）**不截断**（`max_length 262144`） |
 | 文档顺序 | 严格按 CSV `data_source_filenames` 顺序，不得乱序 |
 | 判题器 | `gpt-5.6-luna`（base `http://192.168.13.165:8002`），官方 v1.1 prompt |
 | 指标 | accuracy = CORRECT / 100 |
-| 预期时长 | ~5-6h |
+| 实测耗时 | 生成 9484s（~2h38m，单题 ~95s）+ 判题（2026-09-11 run3 实测） |
 
-> 废弃说明：LongBench v1/v2 实测不可复现（v1 无限复读、v2 判题器不可用），
-> 退出冻结范围。`scripts/run_longbench.py` 保留仅供排障/研究，不产生正式分数。
+> LongBench 定位说明：LongBench v1/v2 实测不可复现官方分（v1 短 max_new_tokens 下复读、
+> v2 判题器不可用），**退出冻结范围，不作为验收口径**；正式长上下文分数 = AA-LCR。
+> `scripts/run_longbench.py` 保留供排障/研究。2026-09-11 已按 v0.1 口径补跑一轮
+> **LongBench v1 × 12 参考评测**（每任务 30 样本，max_length 32768，chat 模板），
+> 分数并入 `result.json` 的 `metrics.dimensions.long_context`，仅作参考，不参与与官方对齐。
 
 ### 1.2 明确不在冻结范围（不得混入）
 
@@ -54,7 +58,8 @@
 - `mmlu_redux_generative`、`mmlu_pro`、`aime24/25`、`leaderboard_math_hard`、
   `minerva_math500`、`gpqa_*`、`humaneval` 系列——v0.0 时代候选，**未冻结**。
   后续若需追加，须先走「新增维度流程」修订本文档。
-- LongBench v1/v2 —— **已取消**（实测不可复现，见 §1.1 废弃说明）。
+- LongBench v1/v2 —— **不作验收口径**（实测不可复现官方分，见 §1.1 定位说明；
+  v1 × 12 已于 2026-09-11 以 30 样本/任务补跑一轮参考分，见 §1.1）。
 - MMLU-ProX 官方全量（英+中混合 12,412）——耗时过高的全量扩展，未冻结。
 
 ---
@@ -74,8 +79,9 @@ Qwen3.5-4B 的 chat 模板默认注入 thinking 前导（`<think>\n` + 400–600
 **AA-LCR 独立接口的口径**（由 `scripts/aa_lcr_run.py` 固化）：
 官方 prompt 模板（`BEGIN INPUT DOCUMENTS ... END INPUT DOCUMENTS` +
 `START/END QUESTION`）逐字还原；文档按 `data_source_filenames` 顺序拼接
-（`BEGIN DOCUMENT {i}:\n{doc}\nEND DOCUMENT {i}`）；每题输入截断到
-90k tokens；生成用 vLLM 并发（2 worker 各 50 题）；判题用 `gpt-5.6-luna`
+（`BEGIN DOCUMENT {i}:\n{doc}\nEND DOCUMENT {i}`）；每题全量上下文不截断；
+生成用 HF generate 单进程串行（fla Triton 内核，`max_new_tokens=4096`、
+`enable_thinking=True`、贪心）；判题用 `gpt-5.6-luna`
 官方 v1.1 system/user prompt，解析 JSON `{"verdict": ...}`，失败重试，
 `accuracy = CORRECT / 100`。判题器细节见 [aa_lcr_plan.md](aa_lcr_plan.md) §2.3。
 
@@ -196,16 +202,15 @@ $PY ifeval_run.py
 $PY mgsm_run.py
 ```
 
-### 4.2 AA-LCR 长上下文（独立接口，~5-6h）
+### 4.2 AA-LCR 长上下文（独立接口，~2h40m 生成 + 判题）
 
 ```bash
 # 数据（服务器已部署）：AA-LCR_Dataset.csv + aa_lcr_data/lcr/ 解压文档
-# 首跑前先装 vLLM：
-export HF_ENDPOINT=https://hf-mirror.com
-/data/yucheng/.local/bin/uv pip install --python .venv/bin/python vllm
-
-# 全量 100 题（2 worker 并行）：
-$PY scripts/aa_lcr_run.py --config configs/aa_lcr_qwen35_4b_v01.yaml
+# 生成引擎为 HF generate + fla 0.3.0 Triton 内核（已装，无需 vLLM）
+# 全量 100 题（单进程串行，增量落盘，崩溃可 --resume 续跑）：
+nohup env JUDGE_API_KEY="$JUDGE_API_KEY" \
+    $PY scripts/aa_lcr_run.py --config configs/aa_lcr_qwen35_4b_v01.yaml \
+    > /data/yucheng/aa_lcr_run.log 2>&1 &
 ```
 
 可选：`--max-questions` 冒烟（如 5 题验证判题器+生成路径）；`--keep-samples`
@@ -260,7 +265,7 @@ reports/results_<version>_<date>.md   # 正式报告快照
 | MMLU-ProX-zh | 840 | exact_match (custom-extract) | **0.63452** | 0.715 | ④ |
 | IFEval | 541 | inst_level_loose_acc | **0.89928** | 0.898 | ⑤ |
 | MGSM (zh) | 250 | exact_match (flexible-extract) | **0.764** | — | ⑥ |
-| AA-LCR | 100 | accuracy（gpt-5.6-luna 判题） | 待 v0.1 全量落盘 | **57.0** | §4.2 |
+| AA-LCR | 100 | accuracy（gpt-5.6-luna 判题） | **0.590** | 57.0 | §4.2 |
 
 > 与官方的已知差距（属数据/采样/模板差异，**不是口径错误**）：
 > C-Eval 差 −10 点（lm-eval `ceval-valid` 缺官方 description 上下文模板）；
@@ -278,7 +283,7 @@ reports/results_<version>_<date>.md   # 正式报告快照
 3. **确认数据**：`AA-LCR_Dataset.csv`（100 行）+ `aa_lcr_data/lcr/`（230 个 .txt）
    存在；模型目录存在。
 4. **跑六个数据集**：依次执行 §4.1 的 ①–⑥，共约 2.5h。
-5. **跑 AA-LCR**：§4.2，约 5-6h。
+5. **跑 AA-LCR**：§4.2，约 2h40m 生成 + 判题。
 6. **核对**：对照 §5 验收表逐项比对；偏差过大 → §7 排查。
 7. **写报告**：`$PY scripts/generate_report.py --config <version 配置>`，结果登记
    `results/registry.yaml`（脚本自动），报告快照放 `reports/`。
@@ -309,10 +314,17 @@ reports/results_<version>_<date>.md   # 正式报告快照
 
 - **2026-09-11（本文件，v1.0 冻结）**：基于 `qwen35-4b-base-v0.1` 已验证口径
   （生成式关 thinking + 选择题纯文本）冻结上述五维六集；长上下文维度
-  定为 **AA-LCR**（vLLM + gpt-5.6-luna，目标复现官方 57.0），
+  定为 **AA-LCR**（目标复现官方 57.0），
   LongBench v1/v2 已取消。
   取代 v0.0 时代"全走 chat 模板"的口径（其分数仅作污染基线，见
   `results/qwen35-4b-base-v0.0/`）。
+- **2026-09-11 晚（run3 落盘后的更正，口径不变）**：AA-LCR 全量 100 题完成，
+  实测 **0.590**（官方 57.0，+2.0，100/100 判题），五维全闭环。
+  实际执行引擎为 HF generate 单进程串行（fla Triton 内核，
+  `max_new_tokens=4096`、`enable_thinking=True`、全量上下文不截断），
+  §1.1/§2.1/§4.2/§5 已按实跑口径更正（原 vLLM 双进程 + 90k 截断为作废设计）。
+  另补跑 LongBench v1 × 12 参考分（30 样本/任务）并入 result.json，
+  不作验收口径（见 §1.1 定位说明）。
 - **后续迭代**（微调 / LoRA / DPO 等）：复制 `configs/template.yaml`，改
   `model.version`（命名 `qwen35-4b-<type>-v<major>.<minor>`）与 `model.path`，
   **评测参数一律沿用本文档 §2 冻结口径**，否则跨版本不可比。

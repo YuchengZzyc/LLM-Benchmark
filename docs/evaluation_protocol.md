@@ -1,6 +1,9 @@
 # 评测协议（Evaluation Protocol）
 
-> 当前阶段：Framework Construction Only（仅框架搭建，未执行任何评测）。
+> **当前阶段：v0.1 基线评测完成（五维全闭环，2026-09-11）。**
+> 本文档定义版本管理规则与运行流程的框架性协议；**冻结的评测口径（维度↔数据集↔
+> 指标↔参数）以 [evaluation_spec.md](evaluation_spec.md) 为唯一权威**，
+> 与本文冲突处以 spec 为准。
 
 本文档定义 Qwen3.5-4B 系列模型的通用能力评测协议：评测目标、能力维度、
 benchmark 说明、版本管理规则与后续运行流程。
@@ -12,24 +15,23 @@ benchmark 说明、版本管理规则与后续运行流程。
 对 Qwen3.5-4B 及其后续实验版本（LoRA / DPO / 其他）进行**通用能力**的
 系统化、可复现、可横向比较的评测。
 
-- **基准版本（baseline）**：`qwen35-4b-base-v0.0`（未微调基座）
+- **当前基线**：`qwen35-4b-base-v0.1`（未微调基座，口径修复版；v0.0 为污染基线）
 - **目标**：所有版本必须在同一协议、同一配置体系、同一结果管理体系下评测，
   保证结果可比。
 
-## 2. 能力维度
+## 2. 能力维度（冻结映射见 [evaluation_spec.md](evaluation_spec.md) §1）
 
-| 能力维度 | Benchmark | 指标 | 状态 |
+| 能力维度 | 数据集（v0.1 冻结口径） | 指标 | 状态 |
 | --- | --- | --- | --- |
-| 1. 知识与理解 | MMLU-Pro, MMLU-Redux, MMLU-ProX (en/zh), C-Eval | Accuracy | 已配置 |
-| 2. 专业推理 | GSM8K, GPQA-Diamond, MATH-Hard\*, AIME 2024/2025\*, MATH-500, HumanEval(+)\*, MBPP+\* | Exact Match / Accuracy | 已配置 |
-| 3. 指令遵循 | IFEval | strict accuracy / loose accuracy | 已配置 |
-| 4a. 长上下文 v2 | LongBench v2（lm-eval 任务组，20 叶任务） | task score | 主框架 |
-| 4b. 长上下文 | LongBench v1（预留 RULER） | task score | 独立接口 |
-| 5. 多语言 | MGSM (zh, 原生 CoT), MMMLU (zh) | language accuracy | 已配置 |
+| 1. 知识与理解 | C-Eval valid、MMLU-ProX (zh) | acc / exact_match | ✅ 已测 |
+| 2. 专业推理 | GSM8K | Exact Match (strict/flexible) | ✅ 已测 |
+| 3. 指令遵循 | IFEval | strict / loose accuracy | ✅ 已测 |
+| 4. 长上下文 | **AA-LCR v1.1**（独立接口，官方协议）；LongBench v1 × 12 参考分 | LLM 判题 accuracy | ✅ 已测 |
+| 5. 多语言 | MGSM (zh, 原生 CoT), MMMLU (zh) | exact_match / acc | ✅ 已测 |
 
-> \* 近似替代项：lm-eval 0.4.13 无 HMMT / LiveCodeBench / OJBench / AA-LCR 任务，
-> 以协议最接近的公开 benchmark 补齐（见 [configs/baseline_qwen35_4b.yaml](../configs/baseline_qwen35_4b.yaml)
-> 头部注释与 §9「协议差异」）。替代关系不构成与模型卡的直接胜负结论。
+> 历史注记：v0.0 时代曾按下表候选集配置（MMLU-Pro / GPQA / AIME / LongBench v2 等），
+> 2026-09-11 冻结时收敛为上表六集 + AA-LCR（取舍记录见 spec §1.2 与
+> [aa_lcr_plan.md](aa_lcr_plan.md)）。
 
 各 benchmark 的来源、所测能力与指标定义见
 [docs/benchmark_description.md](benchmark_description.md)。
@@ -89,7 +91,8 @@ registry 记录的 `results_path` 指向该目录。**任何运行都不得覆�
 ## 5. 技术方案
 
 - **主框架**：`lm-eval`（通用能力评测）
-- **长上下文**：保留独立接口（`scripts/run_longbench.py`），不强行绑定主框架
+- **长上下文**：独立接口（`scripts/aa_lcr_run.py`，AA-LCR 官方协议 +
+  LLM 判题），不强行绑定主框架；`scripts/run_longbench.py` 供 LongBench 参考评测
 - **模型加载**：支持 HuggingFace 模型名 / 本地模型路径；可配置 chat template、
   batch size、dtype
 
@@ -125,17 +128,31 @@ bash scripts/run_eval.sh --config configs/baseline_qwen35_4b.yaml
 python scripts/generate_report.py --config configs/baseline_qwen35_4b.yaml
 ```
 
-### 6.5 长上下文独立评测
+### 6.5 长上下文独立评测（正式：AA-LCR）
 
-长上下文走独立接口（不绑定 lm-eval），由
-`scripts/run_longbench.py` 加载模型、逐任务推理并按 LongBench 官方口径评分：
+长上下维度的**正式评测**走独立接口 `scripts/aa_lcr_run.py`（不绑定 lm-eval），
+按 ArtificialAnalysis 官方 v1.1 协议生成并用 `gpt-5.6-luna` 判题：
+
+```bash
+nohup env JUDGE_API_KEY="$JUDGE_API_KEY" \
+    python scripts/aa_lcr_run.py --config configs/aa_lcr_qwen35_4b_v01.yaml \
+    > /data/yucheng/aa_lcr_run.log 2>&1 &
+```
+
+完整协议（数据部署、prompt 模板、判题器、时间预估）见
+[aa_lcr_plan.md](aa_lcr_plan.md) 与 [evaluation_spec.md](evaluation_spec.md) §1.1。
+
+### 6.6 LongBench 参考评测（非验收口径）
+
+`scripts/run_longbench.py` 仅供 LongBench v1 参考评测（v0.1 已跑 × 12 任务、
+每任务 30 样本，分数并入 result.json 但**不参与与官方对齐**）：
 
 ```bash
 # 默认：按配置 tasks.long_context 运行
-python scripts/run_longbench.py --config configs/baseline_qwen35_4b.yaml
+python scripts/run_longbench.py --config configs/longbench_qwen35_4b_v01.yaml
 
 # 指定子任务 / 覆盖上下文长度 / 保存样本
-python scripts/run_longbench.py --config configs/baseline_qwen35_4b.yaml \
+python scripts/run_longbench.py --config configs/longbench_qwen35_4b_v01.yaml \
     --tasks hotpotqa 2wikimqa --max-length 32768 --keep-samples
 ```
 

@@ -136,6 +136,12 @@ Reply as JSON, with a verdict of CORRECT or INCORRECT.
 | 聚合 + 写结果 | — | 即时 |
 | **合计** | | **~35-40 分钟**（远超预算内） |
 
+> **run3 全量实测（2026-09-11，最终口径）**：开启 thinking（官方口径）后单题
+> 显著慢于冒烟估值——生成 100 题实际 **9484s（~2h38m，单题 ~95s）**。
+> 上表"25-30 分钟"为关 thinking 冒烟的乐观估值，仅作下限参考。
+> run 演进：run1（1024 截断，16 题腰斩）→ run2（关 thinking + 1024，32.7%）→
+> **run3（max_new_tokens=4096 + enable_thinking=True + NFC 文件名归一化）= 59.0**。
+
 ### 3.3 结果落盘（版本化，5 维统一）
 - 写入 `results/qwen35-4b-base-v0.1/result.json` 的 `metrics.dimensions.long_context`（AA-LCR 单独键），**不动**四个已跑通维度的结果。
 - registry/report 同步更新。长上下文维度闭环后，**5 个维度全部有评测数据**。
@@ -149,7 +155,8 @@ Reply as JSON, with a verdict of CORRECT or INCORRECT.
 ├── 读 CSV（100 题）+ 文档（按 data_source_filenames 顺序）
 ├── 建 prompt（官方模板，全量上下文不截断）
 ├── 单进程串行 100 题
-│   ├── 生成：HF generate + chat 模板（enable_thinking=False,
+│   ├── 生成：HF generate + chat 模板（enable_thinking=True（run3 起官方口径；
+│   │   run2 关 thinking + 1024 截断仅 32.7%）,
 │   │   stop_strings=["<|im_end|>"]，bf16，fla 内核）
 │   └── 判题：gpt-5.6-luna（官方 system/user 模板，JSON verdict）
 ├── 每题增量落盘 samples/aa_lcr.json（崩溃最多丢一题；--resume 续跑）

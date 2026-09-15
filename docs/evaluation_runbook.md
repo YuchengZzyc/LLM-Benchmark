@@ -8,11 +8,21 @@
 > [benchmark_description.md](benchmark_description.md)（各 benchmark 定义）、
 > [environment_setup.md](environment_setup.md)（环境搭建说明）。
 >
-> **状态**：2026-09-10 在评测服务器上实际执行并验证。
+> **状态**：2026-09-10 在评测服务器上实际执行并验证（v0.0 轮）。
+>
+> ⚠️ **时效提示（2026-09-15）**：本文 §1 的维度↔数据集映射是 **v0.0 时代的
+> 全量候选清单**（含 mmlu_redux / aime / longbench2 等未冻结任务），仅作历史
+> 记录与排障参考。**当前权威口径以 [evaluation_spec.md](evaluation_spec.md)
+> 为准**：五维 = ceval-valid + mmlu_prox_zh / gsm8k / ifeval /
+> mgsm_native_cot_zh + global_mmlu_zh / AA-LCR（独立接口），v0.1 已全部跑通
+> （LongBench v1 × 12 降级为参考分）。环境搭建与踩坑章节仍然有效。
 
 ---
 
 ## 1. 能力维度 ↔ 测试数据集对应关系
+
+> **本表为 v0.0 时代候选清单（历史）**；冻结口径见
+> [evaluation_spec.md](evaluation_spec.md) §1。
 
 五个能力维度中，前四个由主框架 `lm-eval` 执行（`knowledge` / `reasoning` /
 `instruction` / `multilingual`），长上下文分两条路径执行。

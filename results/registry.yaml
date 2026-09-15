@@ -5,8 +5,8 @@ models:
   status: completed
   results_path: results/qwen35-4b-base-v0.1
   registered_at: '2026-09-11T14:35:00Z'
-  notes: 口径修复基线（关闭 thinking + MMLU 系纯文本 loglikelihood）。GSM8K/C-Eval/MMMLU-zh/MMLU-ProX-zh/IFEval/MGSM/AA-LCR 已实测（AA-LCR 59.0 ≈ 官方 57.0）；LongBench v1 × 12 已完成；MMMLU 全量 57 科待补。
-  last_update: '2026-09-11T15:35:00Z'
+  notes: 口径修复基线（关闭 thinking + MMLU 系纯文本 loglikelihood）。六数据集 + AA-LCR 59.0（官方 57.0，+2.0）+ LongBench v1 × 12 参考分全部完成，五维闭环、全流程跑通。可选后续（非协议内）：MMMLU 全量 57 科、C-Eval description 模板验证、MMLU-Redux。
+  last_update: '2026-09-15T00:00:00Z'
 - version: qwen35-4b-base-v0.0
   type: baseline
   model: Qwen3.5-4B

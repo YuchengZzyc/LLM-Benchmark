@@ -3,9 +3,12 @@
 # Qwen3.5-4B v0.1 基线 · 长上下文维度（LongBench v1 × 12）
 # =============================================================================
 # 由 scripts/run_longbench.py 独立执行（不绑定 lm-eval）。
-# 口径对齐 v0.1：apply_chat_template=false 纯文本（避免 <think> 前导吃掉
-# 上下文预算 + 截断）。max_length 32768 对齐官方 LongBench 协议
+# 口径（2026-09-11 实跑）：apply_chat_template=true —— 官方 LongBench pred.py
+# 对 Qwen 系走 model.chat 模板（以 evaluation.apply_chat_template 为准）。
+# max_length 32768 对齐官方 LongBench 协议
 # （THUDM pred.py 对 Qwen 系取模型最大窗口并截断）。
+# 定位：LongBench 不作验收口径（详见 docs/evaluation_spec.md §1.1），
+# 本轮为 30 样本/任务的参考评测。
 # 结果写入 results/qwen35-4b-base-v0.1/result.json（与主框架合并）。
 # =============================================================================
 

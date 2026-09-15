@@ -4,7 +4,7 @@
     "model": "Qwen3.5-4B",
     "type": "baseline",
     "generated_at": "2026-09-11T14:35:00Z",
-    "notes": "口径修复基线：全部任务关闭 thinking（enable_thinking=False）+ MMLU 系纯文本 loglikelihood。GSM8K/C-Eval/MMMLU-zh/MMLU-ProX-zh/IFEval/MGSM 六数据集实测；LongBench 运行中待补。"
+    "notes": "口径修复基线：lm-eval 任务关闭 thinking（enable_thinking=False）+ MMLU 系纯文本 loglikelihood。六数据集（GSM8K/C-Eval/MMMLU-zh/MMLU-ProX-zh/IFEval/MGSM）+ AA-LCR 59.0（官方 57.0）+ LongBench v1 × 12 参考分全部完成，五维闭环。"
   },
   "environment": {
     "framework": "lm-eval 0.4.13",
@@ -84,7 +84,7 @@
     "mmmlu_prox_zh_v0_0": 0.3738,
     "mmlu_redux_generative_v0_0": 0.2333
   },
-  "_updated": "2026-09-11T15:34:33Z",
+  "_updated": "2026-09-15T00:00:00Z",
   "version": "qwen35-4b-base-v0.1",
   "model": "Qwen3.5-4B",
   "metrics": {
