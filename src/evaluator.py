@@ -42,6 +42,10 @@ def _model_args(cfg: EvalConfig) -> str:
         parts.append(f"revision={cfg.model.revision}")
     if cfg.model.tokenizer_path:
         parts.append(f"tokenizer={cfg.model.tokenizer_path}")
+    if cfg.model.adapter_path:
+        # lm-eval HFLM 的 peft 模型参数：base(pretrained) 加载后由
+        # PeftModel.from_pretrained 挂载 adapter；无 adapter 时行为不变
+        parts.append(f"peft={cfg.model.adapter_path}")
     return ",".join(parts)
 
 

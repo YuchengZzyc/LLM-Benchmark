@@ -21,6 +21,8 @@ def main() -> None:
                   "dtype=bfloat16")
     if not thinking:
         model_args += ",enable_thinking=False,think_end_token=</think>"
+    if os.environ.get("LORA_ADAPTER"):
+        model_args += f",peft={os.environ['LORA_ADAPTER']}"
 
     print(f"### GSM8K thinking={'开' if thinking else '关'} "
           f"limit={limit or '全量'}", flush=True)

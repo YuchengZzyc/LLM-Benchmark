@@ -22,6 +22,8 @@ def main() -> None:
 
     model_args = ("pretrained=/data/yucheng/madm-llm/models/Qwen3.5-4B,"
                   "dtype=bfloat16")
+    if os.environ.get("LORA_ADAPTER"):
+        model_args += f",peft={os.environ['LORA_ADAPTER']}"
 
     print(f"### C-Eval 纯文本 MCQ {nshot}-shot limit={limit or '全量'}", flush=True)
     res = simple_evaluate(

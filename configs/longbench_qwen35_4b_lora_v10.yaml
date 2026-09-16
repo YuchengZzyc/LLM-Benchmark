@@ -1,0 +1,54 @@
+# =============================================================================
+# 配置：longbench_qwen35_4b_lora_v10.yaml
+# Qwen3.5-4B + LoRA v3.2 微调模型 · v1.0 · 长上下文维度（LongBench v1 × 12）
+# =============================================================================
+# 由 scripts/run_longbench.py 独立执行（不绑定 lm-eval）。
+# 口径与 longbench_qwen35_4b_v01.yaml（基线 v0.1）逐字一致，仅 model 段
+# 增加 adapter_path（base+adapter 直挂）——与基线 v0.1 直接 A/B 对比。
+# 结果写入 results/qwen35-4b-lora-v1.0/result.json（与其他维度合并）。
+# =============================================================================
+
+model:
+  name: Qwen3.5-4B
+  version: qwen35-4b-lora-v1.0
+  type: lora
+  path: /data/yucheng/madm-llm/models/Qwen3.5-4B
+  adapter_path: /data/yucheng/madm-llm/madm-llm/output/qwen35_4b_lora_v3.2-peft   # 键名修正版（原目录键主干含 language_model.，PEFT 直挂会静默失效）
+  dtype: bfloat16
+  trust_remote_code: false
+  revision: null
+  tokenizer_path: null
+
+evaluation:
+  framework: longbench
+  batch_size: 1
+  apply_chat_template: true   # 官方 LongBench pred.py 对 Qwen 系走 model.chat 模板（系统提示+角色）
+  max_length: 32768
+  num_fewshot: null
+  seed: 42
+  device: cuda
+  longbench_data_dir: data/longbench
+  gen_kwargs:
+    temperature: 0.0
+    top_p: 1.0
+
+tasks:
+  long_context:
+    - multifieldqa_en
+    - qasper
+    - hotpotqa
+    - 2wikimqa
+    - musique
+    - gov_report
+    - multi_news
+    - trec
+    - triviaqa
+    - samsum
+    - passage_count
+    - passage_retrieval_en
+
+output:
+  root: results/
+  registry: results/registry.yaml
+  keep_samples: false
+  max_samples: 30            # 每任务 30 条（与基线 v0.1 同口径）

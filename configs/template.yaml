@@ -14,6 +14,8 @@ model:
   trust_remote_code: false          # 是否信任远程代码（非必要请保持 false）
   revision: null                    # HF 分支/commit，可为 null
   tokenizer_path: null              # 默认与 model.path 相同，可单独指定
+  adapter_path: null                # LoRA/PEFT adapter 目录（含 adapter_config.json）；
+                                    #   配置后 path=base + adapter 直挂，null = path 即完整模型
 
 evaluation:
   framework: lm-eval  # 主框架（长上下文走独立接口，见 tasks.long_context）

@@ -20,6 +20,8 @@ def main() -> None:
 
     model_args = ("pretrained=/data/yucheng/madm-llm/models/Qwen3.5-4B,"
                   "dtype=bfloat16,enable_thinking=False,think_end_token=</think>")
+    if os.environ.get("LORA_ADAPTER"):
+        model_args += f",peft={os.environ['LORA_ADAPTER']}"
 
     print(f"### IFEval 生成式·关thinking limit={limit or '全量'}", flush=True)
     res = simple_evaluate(

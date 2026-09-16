@@ -265,18 +265,29 @@ results/registry.yaml  # 所有模型版本登记（status: pending/running/comp
 第一条完整记录写入 `results/registry.yaml`；正式基线为 `qwen35-4b-base-v0.0`
 （`baseline_qwen35_4b.yaml`，全量）。后续每次迭代**追加新版本号，旧版本永不覆盖**。
 
-**新增迭代版本的标准流程**（以 LoRA 微调为例）：
+**新增迭代版本的标准流程**（以 LoRA 微调为例，base+adapter 直挂）：
+
+统一口径（与基线 v0.1 对齐）：六数据集独立脚本（gsm8k/ceval/mcq_probe→
+mmmlu_zh/a_b_tasks→mmlu_prox_zh/mgsm/ifeval，设 `LORA_ADAPTER` 环境变量后
+`model_args` 追加 `peft=<adapter>`）+ LongBench 配置
+（`configs/longbench_qwen35_4b_lora_v10.yaml`，`model.adapter_path`）+
+AA-LCR 配置（`configs/aa_lcr_qwen35_4b_lora_v10.yaml`）。
 
 ```bash
-cp configs/template.yaml configs/lora_r1_qwen35_4b.yaml
-# 编辑：model.version: qwen35-4b-lora-v1.0（命名规范见 evaluation_protocol.md §4.1：
-#   qwen35-4b-<type>-v<major>.<minor>）、model.path 指向微调后权重
-# 其余评测参数（batch / dtype / seed / gen_kwargs / 任务清单）与 baseline 保持一致，
-# 否则跨版本不可比
-$PY scripts/run_lm_eval.py  --config configs/lora_r1_qwen35_4b.yaml
-$PY scripts/run_longbench.py --config configs/lora_r1_qwen35_4b.yaml
-$PY scripts/generate_report.py --config configs/lora_r1_qwen35_4b.yaml
+export HF_ENDPOINT=https://hf-mirror.com
+export LORA_ADAPTER=/data/yucheng/madm-llm/madm-llm/output/qwen35_4b_lora_v3.2-peft
+python gsm8k_run.py && python ceval_run.py && python mcq_probe.py
+A_B_GROUP=B A_B_TASKS=mmlu_prox_zh A_B_LIMIT=60 python a_b_tasks.py
+python mgsm_run.py && python ifeval_run.py
+$PY scripts/run_longbench.py --config configs/longbench_qwen35_4b_lora_v10.yaml
+nohup env JUDGE_API_KEY="$JUDGE_API_KEY" $PY scripts/aa_lcr_run.py \
+    --config configs/aa_lcr_qwen35_4b_lora_v10.yaml > /data/yucheng/aa_lcr_lora.log 2>&1 &
 ```
+
+命名规范见 evaluation_protocol.md §4.1（qwen35-4b-<type>-v<major>.<minor>；
+基线两轮 v0.0/v0.1，微调模型从 v1.0 起）。评测参数与对应基线保持一致，否则
+跨版本不可比。首次评测新 adapter 前建议先跑 smoke 配置确认链路，并与基座
+smoke 版本对比分数——**完全一致说明 adapter 没有挂上**。
 
 **复盘入口**（三处，均随运行自动产生，无需手工维护）：
 

@@ -1,0 +1,64 @@
+# =============================================================================
+# 配置：smoke_lora_qwen35_4b.yaml
+# Qwen3.5-4B + LoRA adapter 微调模型冒烟评测配置（base+adapter 直挂）
+# =============================================================================
+# 目标：以 smoke_qwen35_4b.yaml 同款轻量口径验证 adapter 加载链路
+# （lm-eval peft 参数 + LongBench PeftModel 包装），不追求分数准确性。
+# 与 smoke_qwen35_4b.yaml 的唯一差异是 model 段（version/type/adapter_path），
+# 便于与 qwen35-4b-smoke-v0.0 对比确认 adapter 真实生效（分数应有差异；
+# 完全一致 = adapter 没挂上）。
+# =============================================================================
+
+model:
+  name: Qwen3.5-4B
+  version: qwen35-4b-lora-smoke-v1.0
+  type: lora
+  path: /data/yucheng/madm-llm/models/Qwen3.5-4B   # base 模型（tokenizer 也从此加载）
+  adapter_path: /data/yucheng/madm-llm/madm-llm/output/qwen35_4b_lora_v3.2-peft   # 键名修正版（原目录经多模态壳训练，键主干含 language_model.，直挂 PEFT 会全部 miss 静默失效，_fix_adapter_keys.py 重映射生成）
+  dtype: bfloat16
+  trust_remote_code: false
+  revision: null
+  tokenizer_path: null
+
+evaluation:
+  framework: lm-eval
+  batch_size: 8                # 16 在 multilingual 触发 OOM，降为 8
+  apply_chat_template: true
+  max_length: 4096
+  num_fewshot: null            # null = 各任务默认 few-shot
+  seed: 42
+  device: cuda
+  longbench_data_dir: data/longbench   # 本地 jsonl（HF 数据集脚本 LongBench.py 被新版 datasets 拒绝）
+  gen_kwargs:
+    temperature: 0.0
+    top_p: 1.0
+    max_new_tokens: 512       # 冒烟降为 512（省显存/提速；完整评测用 1024）
+
+tasks:
+  knowledge:                    # 知识与理解 -> Accuracy
+    - mmlu_redux_generative     #   MMLU-Redux（generative, 58 叶任务，限量）
+    - mmlu_prox_en              #   MMLU-ProX 英文（5-shot, li-lab/MMLU-ProX）
+    - mmlu_prox_zh              #   MMLU-ProX 中文（5-shot, li-lab/MMLU-ProX）
+  reasoning:                    # 专业推理 -> Exact Match / Accuracy
+    - gsm8k                     #   GSM8K（5-shot）
+    - aime24                    #   AIME 2024（0-shot）——HMMT 补充
+    - minerva_math500           #   MATH-500（4-shot, HuggingFaceH4/MATH-500）
+  instruction:                  # 指令遵循 -> strict / loose accuracy
+    - ifeval                    #   IFEval（0-shot）
+  longbench2:                   # LongBench v2 lm-eval 任务组（冒烟跳过，见头部注释）
+    []
+  code:                         # 代码能力（冒烟跳过，见头部注释）
+    []
+  long_context:                 # 长上下文 LongBench v1，由 run_longbench.py 单独执行
+    - multifieldqa_en           #   | 单文档问答 (F1/EM)
+    - hotpotqa                  #   | 多文档问答 (F1/EM)
+    - trec                      #   | few-shot 分类 (accuracy)
+  multilingual:                 # 多语言 -> language accuracy
+    - mgsm_native_cot_zh        #   MGSM 中文原生 CoT
+    - mmmlu_zh_cn               #   MMMLU 中文子集（57 学科，限量）
+
+output:
+  root: results/
+  registry: results/registry.yaml
+  keep_samples: false
+  max_samples: 20               # 冒烟限量：每任务最多 20 条（管线验证用）

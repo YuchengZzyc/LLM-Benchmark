@@ -283,9 +283,21 @@ def _load_model_and_tokenizer(cfg: EvalConfig):
         tokenizer.pad_token = tokenizer.eos_token
 
     model = AutoModelForCausalLM.from_pretrained(cfg.model.path, **load_kwargs)
+    if cfg.model.adapter_path:
+        # base+adapter 直挂：base 加载后挂载 LoRA adapter（与主框架 lm-eval
+        # 的 peft 参数同一加载方式）；tokenizer 仍从 base/tokenizer_path 加载
+        try:
+            from peft import PeftModel
+        except Exception as exc:  # noqa: BLE001
+            raise NotConfiguredError(
+                "未安装 peft；请在服务器运行: /data/yucheng/.local/bin/uv pip "
+                "install --python /data/yucheng/madm-llm/.venv/bin/python peft"
+            ) from exc
+        model = PeftModel.from_pretrained(model, cfg.model.adapter_path)
     device = str(cfg.evaluation.device or "").lower()
     if device in ("cuda", "cpu"):
         model = model.to(device)
+    model.eval()  # 确保 LoRA dropout 关闭（from_pretrained 默认 eval，双保险）
     torch.manual_seed(cfg.evaluation.seed)
     return model, tokenizer
 

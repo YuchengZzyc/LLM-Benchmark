@@ -198,6 +198,9 @@ class ModelConfig:
     trust_remote_code: bool = False
     revision: Optional[str] = None
     tokenizer_path: Optional[str] = None
+    # LoRA/PEFT adapter 目录（path 指向 base 模型，加载后挂载 adapter；
+    # None = path 即完整模型，行为不变）
+    adapter_path: Optional[str] = None
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> "ModelConfig":

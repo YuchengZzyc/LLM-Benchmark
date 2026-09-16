@@ -161,7 +161,8 @@ def load_docs(row: dict[str, str], docs_root: str) -> list[str]:
 # 生成
 # =============================================================================
 
-def load_model_and_tokenizer(model_path: str, dtype: str):
+def load_model_and_tokenizer(model_path: str, dtype: str,
+                             adapter_path: str | None = None):
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -169,7 +170,12 @@ def load_model_and_tokenizer(model_path: str, dtype: str):
                    "float32": torch.float32}.get(dtype, torch.bfloat16)
     tok = AutoTokenizer.from_pretrained(model_path, trust_remote_code=False)
     model = AutoModelForCausalLM.from_pretrained(
-        model_path, torch_dtype=torch_dtype).to("cuda")
+        model_path, torch_dtype=torch_dtype)
+    if adapter_path:
+        # base+adapter 直挂（与主框架 lm-eval peft / LongBench 同一加载方式）
+        from peft import PeftModel
+        model = PeftModel.from_pretrained(model, adapter_path)
+    model = model.to("cuda").eval()
     return model, tok
 
 
@@ -358,8 +364,10 @@ def main(argv: list[str] | None = None) -> int:
         logger.info("续跑：已跳过 %d 题", len(done))
 
     # 3) 生成 + 判题
-    model, tok = load_model_and_tokenizer(cfg.model.path, cfg.model.dtype)
-    logger.info("模型加载完成")
+    model, tok = load_model_and_tokenizer(cfg.model.path, cfg.model.dtype,
+                                          cfg.model.adapter_path)
+    logger.info("模型加载完成: %s + adapter=%s", cfg.model.path,
+                cfg.model.adapter_path or "(无)")
 
     results: list[dict] = []
     pending = [r for r in rows if r["question_id"] not in done]

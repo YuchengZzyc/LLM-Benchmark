@@ -131,6 +131,8 @@ def _main() -> None:
                       "dtype=bfloat16")
         if extra:
             model_args += "," + extra
+        if os.environ.get("LORA_ADAPTER"):
+            model_args += f",peft={os.environ['LORA_ADAPTER']}"
         res = simple_evaluate(
             model="hf",
             model_args=model_args,

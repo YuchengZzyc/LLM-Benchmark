@@ -18,6 +18,8 @@ def run(tasks, extra="", apply_ct=False, limit=None):
     model_args = "pretrained=/data/yucheng/madm-llm/models/Qwen3.5-4B,dtype=bfloat16"
     if extra:
         model_args += "," + extra
+    if os.environ.get("LORA_ADAPTER"):
+        model_args += f",peft={os.environ['LORA_ADAPTER']}"
     res = simple_evaluate(
         model="hf",
         model_args=model_args,
