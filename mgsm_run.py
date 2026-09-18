@@ -18,7 +18,7 @@ def main() -> None:
         "MGSM_TASKS", "mgsm_native_cot_zh").split(",") if t.strip()]
     limit = int(os.environ.get("MGSM_LIMIT", "0")) or None
 
-    model_args = ("pretrained=/data/yucheng/madm-llm/models/Qwen3.5-4B,"
+    model_args = (f"pretrained={os.environ.get('MODEL_PATH', '/data/yucheng/madm-llm/models/Qwen3.5-4B')},"
                   "dtype=bfloat16,enable_thinking=False,think_end_token=</think>")
     if os.environ.get("LORA_ADAPTER"):
         model_args += f",peft={os.environ['LORA_ADAPTER']}"

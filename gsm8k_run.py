@@ -17,7 +17,7 @@ def main() -> None:
     limit = int(os.environ.get("GSM8K_LIMIT", "0")) or None
     thinking = os.environ.get("GSM8K_THINKING", "false").lower() == "true"
 
-    model_args = ("pretrained=/data/yucheng/madm-llm/models/Qwen3.5-4B,"
+    model_args = (f"pretrained={os.environ.get('MODEL_PATH', '/data/yucheng/madm-llm/models/Qwen3.5-4B')},"
                   "dtype=bfloat16")
     if not thinking:
         model_args += ",enable_thinking=False,think_end_token=</think>"

@@ -20,7 +20,7 @@ def main() -> None:
     limit = int(os.environ.get("CEVAL_LIMIT", "0")) or None
     nshot = int(os.environ.get("CEVAL_FEWSHOT", "5"))
 
-    model_args = ("pretrained=/data/yucheng/madm-llm/models/Qwen3.5-4B,"
+    model_args = (f"pretrained={os.environ.get('MODEL_PATH', '/data/yucheng/madm-llm/models/Qwen3.5-4B')},"
                   "dtype=bfloat16")
     if os.environ.get("LORA_ADAPTER"):
         model_args += f",peft={os.environ['LORA_ADAPTER']}"

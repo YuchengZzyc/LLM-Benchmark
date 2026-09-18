@@ -1,0 +1,159 @@
+{
+  "_updated": "2026-09-18T08:27:25Z",
+  "version": "qwen35-4b-lora-v0.2",
+  "model": "Qwen3.5-4B",
+  "metrics": {
+    "dimensions": {
+      "long_context": {
+        "multifieldqa_en": {
+          "em": 0.0,
+          "f1": 0.237524,
+          "samples": 30,
+          "category": "single_doc_qa"
+        },
+        "qasper": {
+          "em": 0.0,
+          "f1": 0.100557,
+          "samples": 30,
+          "category": "single_doc_qa"
+        },
+        "hotpotqa": {
+          "em": 0.0,
+          "f1": 0.077584,
+          "samples": 30,
+          "category": "multi_doc_qa"
+        },
+        "2wikimqa": {
+          "em": 0.0,
+          "f1": 0.071568,
+          "samples": 30,
+          "category": "multi_doc_qa"
+        },
+        "musique": {
+          "em": 0.0,
+          "f1": 0.063599,
+          "samples": 30,
+          "category": "multi_doc_qa"
+        },
+        "gov_report": {
+          "rougeL": 0.189379,
+          "samples": 30,
+          "category": "summarization"
+        },
+        "multi_news": {
+          "rougeL": 0.175399,
+          "samples": 30,
+          "category": "summarization"
+        },
+        "trec": {
+          "accuracy": 0.1,
+          "samples": 30,
+          "category": "few_shot"
+        },
+        "triviaqa": {
+          "em": 0.8,
+          "f1": 0.900556,
+          "samples": 30,
+          "category": "few_shot"
+        },
+        "samsum": {
+          "rougeL": 0.440402,
+          "samples": 30,
+          "category": "few_shot"
+        },
+        "passage_count": {
+          "accuracy": 0.0,
+          "samples": 30,
+          "category": "synthetic"
+        },
+        "passage_retrieval_en": {
+          "accuracy": 0.333333,
+          "samples": 30,
+          "category": "synthetic"
+        },
+        "aa_lcr": {
+          "dataset": "AA-LCR",
+          "dataset_version": "v1.1",
+          "n_questions": 100,
+          "n_judged": 100,
+          "correct": 62,
+          "accuracy": 0.62,
+          "judge_model": "gpt-5.6-luna",
+          "total_generation_seconds": 18553
+        }
+      }
+    }
+  },
+  "meta": {
+    "version": "qwen35-4b-lora-v0.2",
+    "model": "Qwen3.5-4B",
+    "type": "lora",
+    "generated_at": "2026-09-18T08:27:25Z",
+    "notes": "lora_v3.0.0(SFT) + dpo_v3.1.0(DPO) 两级 LoRA 顺序合并（W + Δ_lora + Δ_dpo，_merge_adapters.py 产物，逐阶段探针验证生效）。口径与 v0.1/v0.3 完全一致：六数据集 thinking-off/纯文本 MCQ 全量 + LongBench v1 × 12 @30 + AA-LCR 100 题（judge gpt-5.6-luna）。"
+  },
+  "environment": {
+    "framework": "lm-eval 0.4.13",
+    "pytorch": "2.11.0+cu128",
+    "transformers": "5.6.0",
+    "gpu": "RTX 5090",
+    "device": "cuda",
+    "batch_size": 8,
+    "seed": 42,
+    "hf_endpoint": "hf-mirror.com",
+    "model_args": "pretrained=/data/yucheng/madm-llm/madm-llm/output/qwen35_4b_lora3.0.0_dpo3.1.0-merged,dtype=bfloat16,enable_thinking=False,think_end_token=</think>"
+  },
+  "results": {
+    "gsm8k": {
+      "samples": 1319,
+      "exact_match_strict": 0.88476,
+      "exact_match_flexible": 0.884,
+      "v01": 0.90296,
+      "gap": -0.0182
+    },
+    "ceval_valid": {
+      "samples": 1346,
+      "acc": 0.74814,
+      "acc_norm": 0.74814,
+      "v01": 0.74963,
+      "gap": -0.00149
+    },
+    "mmmlu_zh": {
+      "samples": 400,
+      "acc": 0.69,
+      "v01": 0.7175,
+      "gap": -0.0275
+    },
+    "mmlu_prox_zh": {
+      "samples": 840,
+      "exact_match_custom_extract": 0.64881,
+      "v01": 0.63452,
+      "gap": 0.01429
+    },
+    "ifeval": {
+      "samples": 541,
+      "prompt_level_strict": 0.74307,
+      "inst_level_strict": 0.81175,
+      "prompt_level_loose": 0.75601,
+      "inst_level_loose": 0.82134,
+      "v01": 0.82255,
+      "gap": -0.07948
+    },
+    "mgsm_native_cot_zh": {
+      "samples": 250,
+      "exact_match_strict": 0.0,
+      "exact_match_flexible": 0.772,
+      "v01": 0.764,
+      "gap": 0.008
+    },
+    "aa_lcr": {
+      "samples": 100,
+      "n_judged": 100,
+      "correct": 62,
+      "accuracy": 0.62,
+      "judge_model": "gpt-5.6-luna",
+      "v01": 0.59,
+      "gap": 0.03,
+      "note": "主轮 86 题 55 对 + 14 题判题超时剥离 resume 补判 7 对；samples/aa_lcr.json 全量 100 条重聚合"
+    }
+  }
+}

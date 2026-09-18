@@ -1,0 +1,55 @@
+# =============================================================================
+# 配置：longbench_qwen35_4b_lora_v02.yaml
+# Qwen3.5-4B + lora_v3.0.0(SFT) + dpo_v3.1.0(DPO) · v0.2 · 长上下文（LongBench v1 × 12）
+# =============================================================================
+# 由 scripts/run_longbench.py 独立执行（不绑定 lm-eval）。
+# 口径与 longbench_qwen35_4b_lora_v03.yaml（lora v3.2，v0.3）逐字一致。
+# 模型形态：两级 LoRA 已顺序合并为完整模型目录（_merge_adapters.py 产物，
+# W + Δ_lora3.0.0 + Δ_dpo3.1.0），故 path 直指合并目录、无 adapter_path。
+# 结果写入 results/qwen35-4b-lora-v0.2/result.json（与其他维度合并）。
+# =============================================================================
+
+model:
+  name: Qwen3.5-4B
+  version: qwen35-4b-lora-v0.2
+  type: lora
+  path: /data/yucheng/madm-llm/madm-llm/output/qwen35_4b_lora3.0.0_dpo3.1.0-merged   # base+lora3.0.0+dpo3.1.0 顺序合并目录
+  adapter_path: null
+  dtype: bfloat16
+  trust_remote_code: false
+  revision: null
+  tokenizer_path: null
+
+evaluation:
+  framework: longbench
+  batch_size: 1
+  apply_chat_template: true   # 官方 LongBench pred.py 对 Qwen 系走 model.chat 模板（系统提示+角色）
+  max_length: 32768
+  num_fewshot: null
+  seed: 42
+  device: cuda
+  longbench_data_dir: data/longbench
+  gen_kwargs:
+    temperature: 0.0
+    top_p: 1.0
+
+tasks:
+  long_context:
+    - multifieldqa_en
+    - qasper
+    - hotpotqa
+    - 2wikimqa
+    - musique
+    - gov_report
+    - multi_news
+    - trec
+    - triviaqa
+    - samsum
+    - passage_count
+    - passage_retrieval_en
+
+output:
+  root: results/
+  registry: results/registry.yaml
+  keep_samples: false
+  max_samples: 30            # 每任务 30 条（与基线 v0.1 / v0.3 同口径）

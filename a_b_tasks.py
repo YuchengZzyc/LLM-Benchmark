@@ -127,7 +127,7 @@ def _main() -> None:
     N = int(os.environ.get("A_B_LIMIT", "30"))
 
     def run(tasks, extra):
-        model_args = ("pretrained=/data/yucheng/madm-llm/models/Qwen3.5-4B,"
+        model_args = (f"pretrained={os.environ.get('MODEL_PATH', '/data/yucheng/madm-llm/models/Qwen3.5-4B')},"
                       "dtype=bfloat16")
         if extra:
             model_args += "," + extra

@@ -1,0 +1,51 @@
+# =============================================================================
+# 配置：aa_lcr_qwen35_4b_lora_v02.yaml
+# Qwen3.5-4B + lora_v3.0.0(SFT) + dpo_v3.1.0(DPO) · v0.2 · AA-LCR（微调目标任务）
+# =============================================================================
+# 由 scripts/aa_lcr_run.py 独立执行（不绑定 lm-eval）。
+# 协议与 aa_lcr_qwen35_4b_lora_v03.yaml（v0.3）逐字一致：100 题全量、官方
+# prompt 模板、开 thinking、判题器 gpt-5.6-luna。
+# 模型形态：两级 LoRA 顺序合并目录（见 longbench_qwen35_4b_lora_v02.yaml 注）。
+# 判题 API key 通过环境变量 JUDGE_API_KEY 传入（不写入任何文件）。
+# =============================================================================
+
+model:
+  name: Qwen3.5-4B
+  version: qwen35-4b-lora-v0.2
+  type: lora
+  path: /data/yucheng/madm-llm/madm-llm/output/qwen35_4b_lora3.0.0_dpo3.1.0-merged   # base+lora3.0.0+dpo3.1.0 顺序合并目录
+  adapter_path: null
+  dtype: bfloat16
+  trust_remote_code: false
+  revision: null
+  tokenizer_path: null
+
+evaluation:
+  framework: aa_lcr
+  batch_size: 1
+  apply_chat_template: true
+  max_length: 262144         # 模型原生窗口，全量上下文不截断
+  num_fewshot: null
+  seed: 42
+  device: cuda
+  # AA-LCR 数据（服务器已就位）
+  aa_lcr_csv_path: /data/yucheng/AA-LCR_Dataset.csv
+  aa_lcr_docs_dir: /data/yucheng/aa_lcr_data/lcr
+  # 判题器（官方协议固定）
+  judge_api_url: http://192.168.13.165:8002
+  judge_model: gpt-5.6-luna
+  gen_kwargs:
+    temperature: 0.0
+    top_p: 1.0
+    max_new_tokens: 4096     # 官方条件无截断限制（Run#2 教训）
+    enable_thinking: true    # 与基线 v0.1 / v0.3 同口径（带思考输出）
+
+tasks:
+  long_context:
+    - aa_lcr
+
+output:
+  root: results/
+  registry: results/registry.yaml
+  keep_samples: true
+  max_samples: 100

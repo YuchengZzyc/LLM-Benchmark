@@ -15,7 +15,8 @@ import os
 def run(tasks, extra="", apply_ct=False, limit=None):
     from lm_eval import simple_evaluate
 
-    model_args = "pretrained=/data/yucheng/madm-llm/models/Qwen3.5-4B,dtype=bfloat16"
+    model_args = (f"pretrained={os.environ.get('MODEL_PATH', '/data/yucheng/madm-llm/models/Qwen3.5-4B')},"
+                  "dtype=bfloat16")
     if extra:
         model_args += "," + extra
     if os.environ.get("LORA_ADAPTER"):

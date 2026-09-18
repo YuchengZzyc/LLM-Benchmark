@@ -25,6 +25,8 @@ Thumbs.db
 *.env
 !.env.example
 !*.env.example
+.remote_pw_tmp
+.judge_key_tmp
 
 # Logs
 *.log
